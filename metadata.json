@@ -1,0 +1,5 @@
+{
+  "name": "AI Translator Pro",
+  "description": "AI-powered translation app with TTS, word lookup, and reasoning explanation.",
+  "requestFramePermissions": ["microphone"]
+}
