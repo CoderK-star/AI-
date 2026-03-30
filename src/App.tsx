@@ -20,7 +20,9 @@ import {
   BookOpen,
   Mic,
   MicOff,
-  Square
+  Square,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type, Modality } from "@google/genai";
@@ -58,6 +60,7 @@ export default function App() {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState('日本語');
+  const [user, setUser] = useState<{ name: string, email: string, picture: string } | null>(null);
   
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -79,11 +82,66 @@ export default function App() {
   useEffect(() => {
     addLog('info', 'アプリケーションが起動しました。翻訳の準備ができました。');
     checkApiKey();
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const origin = event.origin;
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
+        return;
+      }
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        addLog('success', '認証に成功しました。');
+        fetchUser();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+
+  const fetchUser = async () => {
+    try {
+      const response = await fetch('/api/auth/me');
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        addLog('info', `${data.user.name}としてログインしています。`);
+      }
+    } catch (error) {
+      console.error('Fetch user error:', error);
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      const response = await fetch('/api/auth/url');
+      if (!response.ok) throw new Error('Failed to get auth URL');
+      const { url } = await response.json();
+      
+      const authWindow = window.open(url, 'oauth_popup', 'width=600,height=700');
+      if (!authWindow) {
+        alert('ポップアップがブロックされました。認証を続けるにはポップアップを許可してください。');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      addLog('error', 'ログイン中にエラーが発生しました。');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setUser(null);
+      addLog('info', 'ログアウトしました。');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const checkApiKey = async () => {
     if (window.aistudio?.hasSelectedApiKey) {
@@ -334,6 +392,32 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-1 md:gap-2">
+          {user ? (
+            <div className="flex items-center gap-2 mr-2">
+              <img 
+                src={user.picture} 
+                alt={user.name} 
+                className="w-8 h-8 rounded-full border border-gray-200"
+                referrerPolicy="no-referrer"
+              />
+              <span className="hidden md:block text-sm font-medium text-gray-700">{user.name}</span>
+              <button 
+                onClick={handleLogout}
+                className="p-2 hover:bg-red-50 rounded-full transition-colors text-red-500"
+                title="ログアウト"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={handleLogin}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors mr-2"
+            >
+              <UserIcon className="w-4 h-4" />
+              ログイン
+            </button>
+          )}
           <button 
             onClick={() => setShowHelp(true)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"

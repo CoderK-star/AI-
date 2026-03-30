@@ -1,5 +1,5 @@
 {
   "name": "AI Translator Pro",
-  "description": "AI-powered translation app with TTS, word lookup, and reasoning explanation.",
+  "description": "Google Gemini AIを活用した高機能翻訳アプリ。音声入力、リアルタイム翻訳、単語解説、読み上げ機能を搭載。",
   "requestFramePermissions": ["microphone"]
 }
